@@ -1,0 +1,103 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:us-east-1:931574259411:task-definition/app",
+    "containerDefinitions": [
+        {
+            "name": "gntf_app",
+            "image": "931574259411.dkr.ecr.us-east-1.amazonaws.com/getknowtifyd",
+            "cpu": 256,
+            "memory": 512,
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "DB_ENGINE",
+                    "value": "django.db.backends.mysql"
+                },
+                {
+                    "name": "CLIENT_DOMAIN",
+                    "value": "localhost:3000"
+                },
+                {
+                    "name": "EMAIL_BACKEND",
+                    "value": "django_ses.SESBackend"
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "SECRET_KEY",
+                    "valueFrom": "arn:aws:ssm:us-east-1:931574259411:parameter/django_secret"
+                },
+                {
+                    "name": "DB_NAME",
+                    "valueFrom": "arn:aws:ssm:us-east-1:931574259411:parameter/DB_NAME"
+                },
+                {
+                    "name": "DB_HOST",
+                    "valueFrom": "arn:aws:ssm:us-east-1:931574259411:parameter/DB_HOST"
+                },
+                {
+                    "name": "DB_USER",
+                    "valueFrom": "arn:aws:ssm:us-east-1:931574259411:parameter/DB_USER"
+                },
+                {   
+                    "name": "DB_PASSWORD",
+                    "valueFrom": "arn:aws:ssm:us-east-1:931574259411:parameter/DB_PASSWORD"
+                }
+            ],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/app",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            }
+        }
+    ],
+    "family": "app",
+    "taskRoleArn": "arn:aws:iam::931574259411:role/ecsTaskExecutionRole",
+    "executionRoleArn": "arn:aws:iam::931574259411:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "registeredAt": "2023-10-07T15:41:49.577Z",
+    "registeredBy": "arn:aws:iam::931574259411:user/Ekene",
+    "tags": []
+}

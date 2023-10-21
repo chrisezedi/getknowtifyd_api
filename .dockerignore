@@ -1,0 +1,42 @@
+# Exclude version control files and directories
+.git
+.gitignore
+
+# Exclude development and testing directories
+__pycache__
+tests/
+venv/
+
+# Exclude database files (if not using a separate database container)
+db.sqlite3
+
+# Exclude development-specific files
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.log
+*.tmp
+*.bak
+*.swp
+*.settings
+*.env
+*.vscode/
+
+# Exclude build artifacts
+node_modules/
+__pycache__/
+*.egg-info/
+*.egg/
+*.egg-info
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.log
+*.tmp
+*.bak
+*.swp
+*.settings
+*.env
+*.vscode/
