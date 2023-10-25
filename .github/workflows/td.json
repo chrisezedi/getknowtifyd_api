@@ -26,6 +26,10 @@
                 {
                     "name": "EMAIL_BACKEND",
                     "value": "django_ses.SESBackend"
+                },
+                {
+                    "name": "DEBUG",
+                    "value": "False"
                 }
             ],
             "secrets": [
