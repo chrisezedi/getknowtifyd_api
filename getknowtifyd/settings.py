@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG')
 
-ALLOWED_HOSTS = ['www.getknowtifyd.com']
+ALLOWED_HOSTS = ['https://www.getknowtifyd.com']
 
 
 # Application definition
