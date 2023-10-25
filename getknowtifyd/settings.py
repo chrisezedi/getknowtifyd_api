@@ -63,6 +63,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000'
 ]
 
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = ['https://www.getknowtifyd.com']
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
