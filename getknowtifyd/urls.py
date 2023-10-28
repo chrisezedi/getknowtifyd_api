@@ -11,5 +11,5 @@ urlpatterns = [
     path('auth/signup', CreateUser.as_view()),
     path('auth/activate', ActivateUser.as_view(), name='activate'),
     path('auth/resendactivationmail', ResendActivationMail.as_view(), name='resendmail'),
-    path('health_check/', health_check, name="health_check"),
+    path('health-check/', health_check, name="health_check"),
 ]

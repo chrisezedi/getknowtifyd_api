@@ -15,10 +15,6 @@ from .serializers import UserSerializer, ActivateUserSerializer, ResendActivatio
 from .tokens import token_generator
 
 
-def health_check(request):
-    return HttpResponse("OK", status=200)
-
-
 # Registration View.
 def send_activation_mail(instance, data):
     context = {
