@@ -31,10 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'api.getknowtifyd.com']
-
-if not DEBUG:
-    ALLOWED_HOSTS = ['.getknowtifyd.com']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
 
 # Application definition
 
@@ -68,8 +65,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
-
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
 
 # These are optional -- if they're set as environment variables they won't

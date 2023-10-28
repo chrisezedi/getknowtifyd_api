@@ -28,8 +28,12 @@
                     "value": "django_ses.SESBackend"
                 },
                 {
-                    "name": "DEBUG",
-                    "value": "False"
+                    "name": "CORS_ALLOWED_ORIGINS",
+                    "value": "https://getknowtifyd.com"
+                },
+                {
+                    "name": "ALLOWED_HOSTS",
+                    "value": "api.getknowtifyd.com"
                 }
             ],
             "secrets": [
