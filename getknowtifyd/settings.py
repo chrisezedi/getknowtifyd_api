@@ -67,7 +67,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 if not DEBUG:
-    CORS_ALLOWED_ORIGINS = ['https://www.getknowtifyd.com']
+    CORS_ALLOWED_ORIGINS = ['https://www.getknowtifyd.com', 'www.getknowtifyd.com', 'getknowtifyd.com']
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
