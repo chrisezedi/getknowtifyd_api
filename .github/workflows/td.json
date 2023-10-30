@@ -21,7 +21,7 @@
                 },
                 {
                     "name": "CLIENT_DOMAIN",
-                    "value": "localhost:3000"
+                    "value": "https://getknowtifyd.com"
                 },
                 {
                     "name": "EMAIL_BACKEND",
