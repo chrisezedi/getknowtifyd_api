@@ -22,6 +22,7 @@ def send_activation_mail(instance, data):
         'uid': data['email'],
         'token': token_generator.make_token(instance)
     }
+
     html_template = render_to_string("content/activate.html", context=context)
     plain_message = strip_tags(html_template)
     email = EmailMultiAlternatives(
