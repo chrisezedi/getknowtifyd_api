@@ -21,11 +21,19 @@
                 },
                 {
                     "name": "CLIENT_DOMAIN",
-                    "value": "localhost:3000"
+                    "value": "https://getknowtifyd.com"
                 },
                 {
                     "name": "EMAIL_BACKEND",
                     "value": "django_ses.SESBackend"
+                },
+                {
+                    "name": "CORS_ALLOWED_ORIGINS",
+                    "value": "https://getknowtifyd.com"
+                },
+                {
+                    "name": "ALLOWED_HOSTS",
+                    "value": "api.getknowtifyd.com"
                 }
             ],
             "secrets": [
