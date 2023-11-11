@@ -12,6 +12,8 @@ class User(AbstractUser):
 
 def generate_token_for_user(user):
     refresh = RefreshToken.for_user(user)
+    refresh['first_name'] = user.first_name
+    refresh['username'] = user.username
 
     return {
         'refresh': str(refresh),

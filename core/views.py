@@ -65,7 +65,6 @@ class ActivateUser(views.APIView):
                                     status=status.HTTP_400_BAD_REQUEST)
         try:
             serializer = ActivateUserSerializer(data=request.data)
-
             if serializer.is_valid(raise_exception=True):
                 email = serializer.validated_data['uid']
                 activation_token = serializer.validated_data['token']
