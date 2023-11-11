@@ -10,7 +10,7 @@ from rest_framework.mixins import CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from .models import User
+from .models import User, generate_token_for_user
 from .serializers import UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer
 from .tokens import token_generator
 
@@ -65,6 +65,7 @@ class ActivateUser(views.APIView):
                                     status=status.HTTP_400_BAD_REQUEST)
         try:
             serializer = ActivateUserSerializer(data=request.data)
+
             if serializer.is_valid(raise_exception=True):
                 email = serializer.validated_data['uid']
                 activation_token = serializer.validated_data['token']
@@ -73,7 +74,8 @@ class ActivateUser(views.APIView):
                 if token_generator.check_token(user, activation_token):
                     user.is_active = True
                     user.save()
-                    return Response({'message': 'Account Activated Successfully'}, status=status.HTTP_200_OK)
+                    access_refresh_token = generate_token_for_user(user)
+                    return Response({'message': 'Account Activated Successfully', **access_refresh_token}, status=status.HTTP_200_OK)
                 else:
                     return generic_response
         except ValidationError:
