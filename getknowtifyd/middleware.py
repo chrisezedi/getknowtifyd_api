@@ -6,6 +6,6 @@ class HealthCheck:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path == '/health-check/':
+        if request.path == "/health-check/":
             return HttpResponse('ok')
         return self.get_response(request)

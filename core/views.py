@@ -1,18 +1,26 @@
 import os
+
+from django.core.serializers.base import Serializer
+
+import getknowtifyd.settings
+
 from django.core.mail import EmailMultiAlternatives
 from django.contrib.sites.shortcuts import get_current_site
-from django.http import Http404, HttpResponse
+from django.http import Http404
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from rest_framework import views, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import User, generate_token_for_user
 from .serializers import UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer
 from .tokens import token_generator
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 # Registration View.
@@ -74,7 +82,14 @@ class ActivateUser(views.APIView):
                     user.is_active = True
                     user.save()
                     access_refresh_token = generate_token_for_user(user)
-                    return Response({'message': 'Account Activated Successfully', **access_refresh_token}, status=status.HTTP_200_OK)
+                    response = Response({
+                        "message": "Account Activated Successfully", "access_token": access_refresh_token["access"]},
+                        status=status.HTTP_200_OK)
+                    same_site = "None" if getknowtifyd.settings.DEBUG else "strict"
+                    response.set_cookie(
+                        "refresh_token", access_refresh_token["refresh"], max_age=86400,
+                        httponly=True, samesite=same_site, secure=True)
+                    return response
                 else:
                     return generic_response
         except ValidationError:
@@ -112,4 +127,13 @@ class ResendActivationMail(views.APIView):
             return Response({'message': 'Something Went Wrong', 'error': str(e)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({'message': 'Check your mail, another activation mail has been sent.'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Check your mail, another activation mail has been sent.'},
+                        status=status.HTTP_200_OK)
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        if "refresh" not in request.data and request.COOKIES.get("refresh_token"):
+            refresh_token = request.COOKIES.get("refresh_token")
+            request.data["refresh"] = refresh_token
+        return super().post(request, *args, **kwargs)

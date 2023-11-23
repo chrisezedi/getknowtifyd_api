@@ -16,8 +16,6 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import os
 
-import getknowtifyd.settings
-
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -68,7 +66,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
@@ -77,6 +75,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
+CORS_ALLOW_CREDENTIALS = True
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
 
 # These are optional -- if they're set as environment variables they won't
