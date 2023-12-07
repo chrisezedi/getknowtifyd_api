@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class User(AbstractUser):
     USERNAME_FIELD = "email"
     email = models.EmailField(unique=True)
-    username = models.CharField(blank=True, max_length=150)
+    username = models.CharField(blank=True, max_length=150,unique=True)
     REQUIRED_FIELDS = []
 
 
