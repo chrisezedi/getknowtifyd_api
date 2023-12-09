@@ -60,6 +60,9 @@ jobs:
         run: |
           pipenv install --deploy --dev
 
+      - name: Activate virtual environment
+        run: pipenv shell
+
       - name: Run Migrations
         run: pipenv run python manage.py migrate
 
