@@ -55,6 +55,11 @@ jobs:
           path: ~/.local/share/virtualenvs
           key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
 
+      - name: List installed packages
+        if: ${{ steps.cache-pipenv.outputs.cache-hit != 'true' }}
+        run: |
+          pipenv run pip list
+
       - name: Install dependencies
 #        if: ${{ steps.cache-pipenv.outputs.cache-hit != 'true' }}
         run: |
