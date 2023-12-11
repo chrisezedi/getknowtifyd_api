@@ -17,7 +17,7 @@ from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import User, generate_token_for_user
-from .serializers import UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer
+from .serializers import UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer, CheckUsernameAvailability
 from .tokens import token_generator
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -137,3 +137,18 @@ class CustomTokenRefreshView(TokenRefreshView):
             refresh_token = request.COOKIES.get("refresh_token")
             request.data["refresh"] = refresh_token
         return super().post(request, *args, **kwargs)
+
+
+class CheckUsernameAvailabilityView(views.APIView):
+    # noinspection PyMethodMayBeStatic
+    def post(self, request):
+        try:
+            serializer = CheckUsernameAvailability(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                validated_username = serializer.validated_data["username"]
+                username_available = not User.objects.filter(username=validated_username).exists()
+                username = validated_username if username_available else None
+                return Response({"usernameAvailable": username_available, "username": username})
+        except ValidationError as error:
+            return Response({"error": str(error), "message": "Username field is invalid"},
+                            status=status.HTTP_400_BAD_REQUEST)
