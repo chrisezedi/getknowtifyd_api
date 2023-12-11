@@ -99,3 +99,35 @@ class TestResendActivationMail:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['redirect'] == "/"
+
+
+@pytest.mark.django_db
+class TestUsernameAvailability:
+    endpoint = "/user/check-username-availability"
+
+    def test_username_field_invalid(self, make_api_request):
+        response = make_api_request(self.endpoint, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_username_not_available(self, make_api_request):
+        User.objects.create_user(
+            username='johndoe', email='johndoe@example.com', password='password123$',
+            first_name='john', last_name='doe')
+
+        response = make_api_request(self.endpoint, {'username': 'johndoe'})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["usernameAvailable"] is False
+        assert response.data["username"] is None
+
+    def test_username_available(self, make_api_request):
+        User.objects.create_user(
+            username='johndoe', email='johndoe@example.com', password='password123$',
+            first_name='john', last_name='doe')
+
+        response = make_api_request(self.endpoint, {'username': 'johndoe1'})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["usernameAvailable"] is True
+        assert response.data["username"] == "johndoe1"
