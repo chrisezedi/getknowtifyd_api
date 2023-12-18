@@ -7,38 +7,32 @@ from core.tokens import token_generator
 
 @pytest.mark.django_db
 class TestCreateUser:
+    endpoint = "/auth/signup"
+    user = {'username': 'johndoe', 'email': 'johndoe@example.com', 'password': 'password123$',
+            'first_name': 'john', 'last_name': 'doe'}
+
     def test_invalid_data_returns_400(self, make_api_request):
-        response = make_api_request("/auth/signup", {'username': 'johndoe'})
+        response = make_api_request(self.endpoint, {'username': 'johndoe'})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_username_or_email_already_exist_returns_400(self, make_api_request):
-        User.objects.create_user(username='johndoe', email='johndoe@example.com', password='password123$',
-                                 first_name='john', last_name='doe')
+        User.create_dummy_user()
 
-        response = make_api_request("/auth/signup", {
-            'username': 'johndoe', 'email': 'johndoe@example.com', 'password': 'password123$',
-            'first_name': 'john', 'last_name': 'doe'
-           })
+        response = make_api_request(self.endpoint, self.user)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data['email'] is not None
         assert 'unique' == response.data['email'][0].code
 
     def test_user_created_returns_201(self, make_api_request):
-        response = make_api_request("/auth/signup", {
-            'username': 'johndoe', 'email': 'johndoe@example.com',
-            'password': 'password123$', 'first_name': 'john', 'last_name': 'doe'
-        })
+        response = make_api_request(self.endpoint, self.user)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['is_active'] is False
 
     def test_send_activation_email(self, make_api_request):
-        make_api_request("/auth/signup", {
-            'username': 'johndoe', 'email': 'johndoe@example.com',
-            'password': 'password123$', 'first_name': 'john', 'last_name': 'doe'
-        })
+        make_api_request(self.endpoint, self.user)
 
         assert len(mail.outbox) == 1
         assert 'Account Activation' == mail.outbox[0].subject
@@ -47,8 +41,10 @@ class TestCreateUser:
 
 @pytest.mark.django_db
 class TestActivateUser:
+    endpoint = "/auth/activate"
+
     def test_invalid_data_returns_400(self, make_put_request):
-        response = make_put_request("/auth/activate", {})
+        response = make_put_request(self.endpoint, {})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -59,9 +55,7 @@ class TestActivateUser:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_token_invalid_returns_400(self, make_put_request):
-        instance = User.objects.create_user(
-            username='johndoe', email='johndoe@example.com', password='password123$',
-            first_name='john', last_name='doe')
+        instance = User.create_dummy_user()
 
         response = make_put_request("/auth/activate", {'uid': instance, 'token': 'invalid token'})
 
@@ -69,9 +63,7 @@ class TestActivateUser:
         assert response.data['err_type'] == 'invalid_token'
 
     def test_token_valid_returns_200(self, make_put_request):
-        instance = User.objects.create_user(
-            username='johndoe', email='johndoe@example.com', password='password123$',
-            first_name='john', last_name='doe')
+        instance = User.create_dummy_user()
 
         response = make_put_request("/auth/activate", {'uid': instance, 'token': token_generator.make_token(instance)})
 
@@ -91,9 +83,7 @@ class TestResendActivationMail:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_user_already_active(self, make_api_request):
-        User.objects.create_user(
-            username='johndoe', email='johndoe@example.com', password='password123$',
-            first_name='john', last_name='doe')
+        User.create_dummy_user()
 
         response = make_api_request("/auth/resendactivationmail", {'uid': 'johndoe@example.com'})
 
@@ -106,27 +96,24 @@ class TestUsernameAvailability:
     endpoint = "/user/check-username-availability"
 
     def test_username_field_invalid(self, make_api_request):
-        response = make_api_request(self.endpoint, {})
+        response = make_api_request(self.endpoint, {}, create_user=True)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_username_not_available(self, make_api_request):
-        User.objects.create_user(
-            username='johndoe', email='johndoe@example.com', password='password123$',
-            first_name='john', last_name='doe')
-
+    def test_user_not_authenticated(self, make_api_request):
         response = make_api_request(self.endpoint, {'username': 'johndoe'})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_username_not_available(self, make_api_request):
+        response = make_api_request(self.endpoint, {'username': 'johndoe'}, create_user=True)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["usernameAvailable"] is False
         assert response.data["username"] is None
 
     def test_username_available(self, make_api_request):
-        User.objects.create_user(
-            username='johndoe', email='johndoe@example.com', password='password123$',
-            first_name='john', last_name='doe')
-
-        response = make_api_request(self.endpoint, {'username': 'johndoe1'})
+        response = make_api_request(self.endpoint, {'username': 'johndoe1'}, create_user=True)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["usernameAvailable"] is True
