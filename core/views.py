@@ -1,7 +1,4 @@
 import os
-
-from django.core.serializers.base import Serializer
-
 import getknowtifyd.settings
 
 from django.core.mail import EmailMultiAlternatives
@@ -17,7 +14,8 @@ from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import User, generate_token_for_user
-from .serializers import UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer, CheckUsernameAvailability
+from .serializers import (UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer,
+                          CheckUsernameAvailability)
 from .tokens import token_generator
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -140,6 +138,8 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 
 class CheckUsernameAvailabilityView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
     # noinspection PyMethodMayBeStatic
     def post(self, request):
         try:
