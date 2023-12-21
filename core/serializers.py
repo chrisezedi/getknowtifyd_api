@@ -18,5 +18,5 @@ class ResendActivationMailSerializer(serializers.Serializer):
     uid = serializers.CharField()
 
 
-class CheckUsernameAvailability(serializers.Serializer):
+class UsernameAvailabilitySerializer(serializers.Serializer):
     username = serializers.CharField()
