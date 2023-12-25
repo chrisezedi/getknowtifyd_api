@@ -15,9 +15,9 @@ from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import User, generate_token_for_user
 from .serializers import (UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer,
-                          CheckUsernameAvailability)
+                          UsernameAvailabilitySerializer)
 from .tokens import token_generator
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.views import TokenRefreshView
 
 
@@ -143,12 +143,35 @@ class CheckUsernameAvailabilityView(views.APIView):
     # noinspection PyMethodMayBeStatic
     def post(self, request):
         try:
-            serializer = CheckUsernameAvailability(data=request.data)
+            serializer = UsernameAvailabilitySerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
                 validated_username = serializer.validated_data["username"]
                 username_available = not User.objects.filter(username=validated_username).exists()
                 username = validated_username if username_available else None
                 return Response({"usernameAvailable": username_available, "username": username})
+        except ValidationError as error:
+            return Response({"error": str(error), "message": "Username field is invalid"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+class SetUsernameView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    # noinspection PyMethodMayBeStatic
+    def post(self, request):
+        try:
+            serializer = UsernameAvailabilitySerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                username = serializer.validated_data["username"]
+                username_available = not User.objects.filter(username=username).exists()
+                if not username_available:
+                    return Response({"message": "This username is not available"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    user = User.objects.get(email=request.user)
+                    user.username = username
+                    user.save()
+                    return Response({"message": "username set successfully", "username": user.username}, status=status.HTTP_200_OK)
+
         except ValidationError as error:
             return Response({"error": str(error), "message": "Username field is invalid"},
                             status=status.HTTP_400_BAD_REQUEST)

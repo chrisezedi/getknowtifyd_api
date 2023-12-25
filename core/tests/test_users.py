@@ -6,7 +6,7 @@ from core.tokens import token_generator
 
 
 @pytest.mark.django_db
-class TestCreateUser:
+class TestCreateUserView:
     endpoint = "/auth/signup"
     user = {'username': 'johndoe', 'email': 'johndoe@example.com', 'password': 'password123$',
             'first_name': 'john', 'last_name': 'doe'}
@@ -40,7 +40,7 @@ class TestCreateUser:
 
 
 @pytest.mark.django_db
-class TestActivateUser:
+class TestActivateUserView:
     endpoint = "/auth/activate"
 
     def test_invalid_data_returns_400(self, make_put_request):
@@ -71,7 +71,7 @@ class TestActivateUser:
 
 
 @pytest.mark.django_db
-class TestResendActivationMail:
+class TestResendActivationMailView:
     def test_invalid_data_returns_400(self, make_api_request):
         response = make_api_request("/auth/resendactivationmail", {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -92,7 +92,7 @@ class TestResendActivationMail:
 
 
 @pytest.mark.django_db
-class TestUsernameAvailability:
+class TestUsernameAvailabilityView:
     endpoint = "/user/check-username-availability"
 
     def test_username_field_invalid(self, make_api_request):
@@ -118,3 +118,31 @@ class TestUsernameAvailability:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["usernameAvailable"] is True
         assert response.data["username"] == "johndoe1"
+
+
+@pytest.mark.django_db
+class TestSetUsernameView:
+    endpoint = "/user/set-username"
+
+    def test_username_field_invalid(self, make_api_request):
+        response = make_api_request(self.endpoint, {}, create_user=True)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_user_not_authenticated(self, make_api_request):
+        response = make_api_request(self.endpoint, {'username': 'johndoe'})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_username_not_available(self, make_api_request):
+        response = make_api_request(self.endpoint, {'username': 'johndoe'}, create_user=True)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_username_is_set(self, make_api_request):
+        response = make_api_request(self.endpoint, {'username': 'janedoe'}, create_user=True)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["username"] == "janedoe"
+
+
