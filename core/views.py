@@ -6,19 +6,23 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.http import Http404
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from django.core.exceptions import ObjectDoesNotExist
+
 from rest_framework import views, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenRefreshView
+
 from .models import User, generate_token_for_user
 from .serializers import (UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer,
-                          UsernameAvailabilitySerializer)
+                          UsernameAvailabilitySerializer, LoginUserSerializer)
 from .tokens import token_generator
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework_simplejwt.views import TokenRefreshView
 
 
 # Registration View.
@@ -152,6 +156,9 @@ class CheckUsernameAvailabilityView(views.APIView):
         except ValidationError as error:
             return Response({"error": str(error), "message": "Username field is invalid"},
                             status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'Something Went Wrong', 'error': str(e)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SetUsernameView(views.APIView):
@@ -175,3 +182,43 @@ class SetUsernameView(views.APIView):
         except ValidationError as error:
             return Response({"error": str(error), "message": "Username field is invalid"},
                             status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'Something Went Wrong', 'error': str(e)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LoginUserView(views.APIView):
+
+    # noinspection PyMethodMayBeStatic
+
+    def post(self, request):
+        invalid_response = Response({"message": "Email or Password invalid"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer = LoginUserSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                email = serializer.validated_data["email"]
+                password = serializer.validated_data["password"]
+                user = get_user_model().objects.get(email=email)
+
+                if not user.check_password(password):
+                    return invalid_response
+                else:
+                    access_refresh_token = generate_token_for_user(user)
+                    response = Response({
+                        "message": "User logged in Successfully", "access_token": access_refresh_token["access"]},
+                        status=status.HTTP_200_OK)
+
+                    same_site = "None" if getknowtifyd.settings.DEBUG else "strict"
+                    response.set_cookie(
+                        "refresh_token", access_refresh_token["refresh"], max_age=86400,
+                        httponly=True, samesite=same_site, secure=True)
+                    return response
+
+        except ValidationError as error:
+            return Response({"error": str(error), "message": "Invalid Request"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist:
+            return invalid_response
+        except Exception as e:
+            return Response({'message': 'Something Went Wrong', 'error': str(e)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
