@@ -146,3 +146,30 @@ class TestSetUsernameView:
         assert response.data["username"] == "janedoe"
 
 
+@pytest.mark.django_db
+class TestUserLoginView:
+    endpoint = "/auth/signin"
+
+    def test_login_props_invalid(self, make_api_request):
+        response = make_api_request(self.endpoint, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_user_does_not_exist(self, make_api_request):
+        response = make_api_request(self.endpoint, {"email": "johndoe@example.com", "password": "password"})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_invalid_signin_password(self, make_api_request):
+        response = make_api_request(self.endpoint, {"email": "johndoe@example.com", "password": "password"},
+                                    create_user=True)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_signin_success(self, make_api_request):
+        response = make_api_request(self.endpoint, {"email": "johndoe@example.com", "password": "password123$"},
+                                    create_user=True)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "access_token" in response.data
+        assert "refresh_token" in response.cookies
