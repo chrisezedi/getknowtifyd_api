@@ -20,3 +20,8 @@ class ResendActivationMailSerializer(serializers.Serializer):
 
 class UsernameAvailabilitySerializer(serializers.Serializer):
     username = serializers.CharField()
+
+
+class LoginUserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
