@@ -1,4 +1,7 @@
 import os
+
+import requests
+
 import getknowtifyd.settings
 
 from django.core.mail import EmailMultiAlternatives
@@ -6,13 +9,13 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.http import Http404
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.utils.crypto import get_random_string
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import views, status
-from rest_framework.generics import GenericAPIView
-from rest_framework.mixins import CreateModelMixin
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
@@ -21,7 +24,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .models import User, generate_token_for_user
 from .serializers import (UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer,
-                          UsernameAvailabilitySerializer, LoginUserSerializer)
+                          UsernameAvailabilitySerializer, LoginUserSerializer, GoogleAuthSerializer)
 from .tokens import token_generator
 
 
@@ -42,27 +45,42 @@ def send_activation_mail(instance, data):
         to=[data['email']])
 
     email.attach_alternative(html_template, "text/html")
-    email.send()
+    mail_sent = email.send()
+    return mail_sent
 
 
-class CreateUser(CreateModelMixin, GenericAPIView):
+class CreateUser(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    current_site = ""
+    current_site = None
 
-    def post(self, request, *args, **kwargs):
-        self.current_site = get_current_site(request)
-        return self.create(request, *args, **kwargs)
-
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         try:
-            password = serializer.validated_data['password']
-            user = User(**serializer.validated_data)
-            user.set_password(password)
-            user.is_active = False
-            user.save()
-            if user:
-                send_activation_mail(user, serializer.data)
+            self.current_site = get_current_site(request)
+            username = ("sysgen_" + request.data["first_name"] + "_" + request.data["last_name"] + "_" +
+                        get_random_string(10))
+            data = request.data
+            data["username"] = username
+            serializer = self.get_serializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                properties_to_exclude = ['email', 'password']
+
+                extra_fields = {key: value for key, value in serializer.validated_data.items()
+                                if key not in properties_to_exclude}
+                user = User.objects.create_user(
+                    email=serializer.validated_data["email"],
+                    password=serializer.validated_data["password"],
+                    **extra_fields)
+                if user and send_activation_mail(user, serializer.data) == 1:
+                    serializer.data.pop("username", None)
+                    new_user = serializer.data.copy()
+                    new_user.pop("username", None)
+                    return Response({'message': 'User created Successfully', "user": new_user},
+                                    status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({'message': 'Invalid Request', 'error': str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'message': 'Something Went Wrong', 'error': str(e)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -177,7 +195,8 @@ class SetUsernameView(views.APIView):
                     user = User.objects.get(email=request.user)
                     user.username = username
                     user.save()
-                    return Response({"message": "username set successfully", "username": user.username}, status=status.HTTP_200_OK)
+                    return Response({"message": "username set successfully", "username": user.username},
+                                    status=status.HTTP_200_OK)
 
         except ValidationError as error:
             return Response({"error": str(error), "message": "Username field is invalid"},
@@ -222,3 +241,56 @@ class LoginUserView(views.APIView):
         except Exception as e:
             return Response({'message': 'Something Went Wrong', 'error': str(e)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GoogleAuthView(views.APIView):
+    # noinspection PyMethodMayBeStatic
+
+    def post(self, request):
+        """
+        if users doesn't exist create user,
+        modify model, so password is not required
+        when creating check view, if google view => create without password, if not google view, require password
+        on login, if user from google auth redirect to signin with google
+        """
+        try:
+            serializer = GoogleAuthSerializer(data=request.data)
+
+            if serializer.is_valid(raise_exception=True):
+                code = serializer.validated_data["code"]
+                data = {
+                    'code': code,
+                    'client_id': os.environ.get("GOOGLE_OAUTH2_CLIENT_ID"),
+                    'client_secret': os.environ.get("GOOGLE_OAUTH2_CLIENT_SECRET"),
+                    'redirect_uri': os.environ.get("redirect_uri"),
+                    'grant_type': 'authorization_code'
+                }
+
+                response = requests.post("https://oauth2.googleapis.com/token", data=data)
+                google_error_response = Response({"message": "something went wrong"},
+                                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                if not response.ok:
+                    return google_error_response
+                else:
+                    access_token = response.json()["access_token"]
+                    response = requests.get("https://www.googleapis.com/oauth2/v3/userinfo",
+                                            params={'access_token': access_token})
+                    if not response.ok:
+                        return google_error_response
+                    else:
+                        user_data = response.json()
+                        profile_data = {
+                            'email': user_data['email'],
+                            'first_name': user_data.get('given_name', ''),
+                            'last_name': user_data.get('family_name', ''),
+                        }
+                        """
+                            if user exists, create and send token,
+                            else create user and send token
+                        """
+                        # if not User.objects.filter(email=profile_data["email"]).exists():
+                        #     create user
+                    return Response({"token": access_token}, status=status.HTTP_200_OK)
+        except ValidationError as error:
+            return Response({"error": str(error), "message": "Code not sent"},
+                            status=status.HTTP_400_BAD_REQUEST)

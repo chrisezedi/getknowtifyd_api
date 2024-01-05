@@ -5,8 +5,11 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'username', 'password', 'is_active']
+        fields = ['first_name', 'last_name', 'email', 'password', 'username', 'is_active']
         read_only = ['is_active']
+        extra_kwargs = {
+            'password': {'write_only': True},
+        }
 
 
 class ActivateUserSerializer(serializers.Serializer):
@@ -25,3 +28,7 @@ class UsernameAvailabilitySerializer(serializers.Serializer):
 class LoginUserSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    code = serializers.CharField()

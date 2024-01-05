@@ -17,6 +17,7 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
+
         user.save()
         return user
 
@@ -38,10 +39,13 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractUser):
     USERNAME_FIELD = "email"
     email = models.EmailField(unique=True)
-    username = models.CharField(blank=True, max_length=150, unique=True)
+    username = models.CharField(max_length=150, unique=True)
     REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
+
+    def __str__(self):
+        return self.email
 
     @staticmethod
     def create_dummy_user():
