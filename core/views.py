@@ -9,7 +9,6 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.http import Http404
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.utils.crypto import get_random_string
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
@@ -22,10 +21,11 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import User, generate_token_for_user
+from .models import User, generate_token_for_user, generate_sys_username
 from .serializers import (UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer,
                           UsernameAvailabilitySerializer, LoginUserSerializer, GoogleAuthSerializer)
 from .tokens import token_generator
+from .utils import generate_access_refresh_token_response
 
 
 # Registration View.
@@ -57,11 +57,7 @@ class CreateUser(CreateAPIView):
     def create(self, request, *args, **kwargs):
         try:
             self.current_site = get_current_site(request)
-            username = ("sysgen_" + request.data["first_name"] + "_" + request.data["last_name"] + "_" +
-                        get_random_string(10))
-            data = request.data
-            data["username"] = username
-            serializer = self.get_serializer(data=data)
+            serializer = self.get_serializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
                 properties_to_exclude = ['email', 'password']
 
@@ -72,7 +68,6 @@ class CreateUser(CreateAPIView):
                     password=serializer.validated_data["password"],
                     **extra_fields)
                 if user and send_activation_mail(user, serializer.data) == 1:
-                    serializer.data.pop("username", None)
                     new_user = serializer.data.copy()
                     new_user.pop("username", None)
                     return Response({'message': 'User created Successfully', "user": new_user},
@@ -101,15 +96,7 @@ class ActivateUser(views.APIView):
                 if token_generator.check_token(user, activation_token):
                     user.is_active = True
                     user.save()
-                    access_refresh_token = generate_token_for_user(user)
-                    response = Response({
-                        "message": "Account Activated Successfully", "access_token": access_refresh_token["access"]},
-                        status=status.HTTP_200_OK)
-                    same_site = "None" if getknowtifyd.settings.DEBUG else "strict"
-                    response.set_cookie(
-                        "refresh_token", access_refresh_token["refresh"], max_age=86400,
-                        httponly=True, samesite=same_site, secure=True)
-                    return response
+                    return generate_access_refresh_token_response(user)
                 else:
                     return generic_response
         except ValidationError:
@@ -247,12 +234,6 @@ class GoogleAuthView(views.APIView):
     # noinspection PyMethodMayBeStatic
 
     def post(self, request):
-        """
-        if users doesn't exist create user,
-        modify model, so password is not required
-        when creating check view, if google view => create without password, if not google view, require password
-        on login, if user from google auth redirect to signin with google
-        """
         try:
             serializer = GoogleAuthSerializer(data=request.data)
 
@@ -283,13 +264,19 @@ class GoogleAuthView(views.APIView):
                             'email': user_data['email'],
                             'first_name': user_data.get('given_name', ''),
                             'last_name': user_data.get('family_name', ''),
+                            'is_active': True,
+                            'username': generate_sys_username()
                         }
-                        """
-                            if user exists, create and send token,
-                            else create user and send token
-                        """
-                        # if not User.objects.filter(email=profile_data["email"]).exists():
-                        #     create user
+                        if not User.objects.filter(email=profile_data["email"]).exists():
+                            extra_fields = profile_data.copy()
+                            extra_fields.pop("email")
+                            user = User.objects.create_user(email=profile_data["email"], password=None, **extra_fields)
+                            if user:
+                                return generate_access_refresh_token_response(user)
+                        else:
+                            existing_user = User.objects.get(email=profile_data["email"])
+                            return generate_access_refresh_token_response(existing_user)
+
                     return Response({"token": access_token}, status=status.HTTP_200_OK)
         except ValidationError as error:
             return Response({"error": str(error), "message": "Code not sent"},

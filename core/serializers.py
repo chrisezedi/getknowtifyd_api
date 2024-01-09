@@ -1,8 +1,11 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, generate_sys_username
 
 
 class UserSerializer(serializers.ModelSerializer):
+    system_gen_username = generate_sys_username()
+    username = serializers.CharField(default=system_gen_username)
+
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'password', 'username', 'is_active']
