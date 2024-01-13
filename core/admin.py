@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User
+from .models import User, Tag
 # Register your models here.
 
 
@@ -12,3 +12,6 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('username', 'password', 'email', 'first_name', 'last_name'),
         }),
     )
+
+
+admin.site.register(Tag)

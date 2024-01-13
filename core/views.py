@@ -264,13 +264,13 @@ class GoogleAuthView(views.APIView):
                             'email': user_data['email'],
                             'first_name': user_data.get('given_name', ''),
                             'last_name': user_data.get('family_name', ''),
-                            'is_active': True,
                             'username': generate_sys_username()
                         }
                         if not User.objects.filter(email=profile_data["email"]).exists():
                             extra_fields = profile_data.copy()
                             extra_fields.pop("email")
-                            user = User.objects.create_user(email=profile_data["email"], password=None, **extra_fields)
+                            user = User.objects.create_user(email=profile_data["email"], password=None, is_active=True,
+                                                            **extra_fields)
                             if user:
                                 return generate_access_refresh_token_response(user)
                         else:
