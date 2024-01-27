@@ -35,3 +35,7 @@ class LoginUserSerializer(serializers.Serializer):
 
 class GoogleAuthSerializer(serializers.Serializer):
     code = serializers.CharField()
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()

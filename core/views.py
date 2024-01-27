@@ -2,13 +2,8 @@ import os
 
 import requests
 
-import getknowtifyd.settings
-
-from django.core.mail import EmailMultiAlternatives
 from django.contrib.sites.shortcuts import get_current_site
 from django.http import Http404
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
@@ -21,34 +16,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import User, generate_token_for_user, generate_sys_username
+from .models import User, generate_sys_username
 from .serializers import (UserSerializer, ActivateUserSerializer, ResendActivationMailSerializer,
-                          UsernameAvailabilitySerializer, LoginUserSerializer, GoogleAuthSerializer)
+                          UsernameAvailabilitySerializer, LoginUserSerializer, GoogleAuthSerializer,)
+from .utils import generate_access_refresh_token_response, send_activation_mail
 from .tokens import token_generator
-from .utils import generate_access_refresh_token_response
 
 
 # Registration View.
-def send_activation_mail(instance, data):
-    context = {
-        'domain': os.environ.get('CLIENT_DOMAIN'),
-        'uid': data['email'],
-        'token': token_generator.make_token(instance)
-    }
-
-    html_template = render_to_string("content/activate.html", context=context)
-    plain_message = strip_tags(html_template)
-    email = EmailMultiAlternatives(
-        subject="Account Activation",
-        body=plain_message,
-        from_email="notification@getknowtifyd.com",
-        to=[data['email']])
-
-    email.attach_alternative(html_template, "text/html")
-    mail_sent = email.send()
-    return mail_sent
-
-
 class CreateUser(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -209,16 +184,7 @@ class LoginUserView(views.APIView):
                 if not user.check_password(password):
                     return invalid_response
                 else:
-                    access_refresh_token = generate_token_for_user(user)
-                    response = Response({
-                        "message": "User logged in Successfully", "access_token": access_refresh_token["access"]},
-                        status=status.HTTP_200_OK)
-
-                    same_site = "None" if getknowtifyd.settings.DEBUG else "strict"
-                    response.set_cookie(
-                        "refresh_token", access_refresh_token["refresh"], max_age=86400,
-                        httponly=True, samesite=same_site, secure=True)
-                    return response
+                    return generate_access_refresh_token_response(user)
 
         except ValidationError as error:
             return Response({"error": str(error), "message": "Invalid Request"},
@@ -240,11 +206,11 @@ class GoogleAuthView(views.APIView):
             if serializer.is_valid(raise_exception=True):
                 code = serializer.validated_data["code"]
                 data = {
-                    'code': code,
-                    'client_id': os.environ.get("GOOGLE_OAUTH2_CLIENT_ID"),
-                    'client_secret': os.environ.get("GOOGLE_OAUTH2_CLIENT_SECRET"),
-                    'redirect_uri': os.environ.get("redirect_uri"),
-                    'grant_type': 'authorization_code'
+                    "code": code,
+                    "client_id": os.environ.get("GOOGLE_OAUTH2_CLIENT_ID"),
+                    "client_secret": os.environ.get("GOOGLE_OAUTH2_CLIENT_SECRET"),
+                    "redirect_uri": os.environ.get("redirect_uri"),
+                    "grant_type": 'authorization_code'
                 }
 
                 response = requests.post("https://oauth2.googleapis.com/token", data=data)
@@ -281,3 +247,20 @@ class GoogleAuthView(views.APIView):
         except ValidationError as error:
             return Response({"error": str(error), "message": "Code not sent"},
                             status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendPasswordResetLinkView(views.APIView):
+    # noinspection PyMethodMayBeStatic
+    def post(self):
+        """ --- SEND_PASSWORD_RESET_VIEW ---
+            - request for email,
+            - send reset link with token (mail inside token)
+            ------------------------------------------------
+            --- RESET_PASSWORD_VIEW ---
+            - verify that token is correct and retrieve email
+            - if not valid, token has expired or invalid
+            - if valid ask for new password,
+            - validate password and update
+            - redirect user to login view, where they need to enter new password
+        """
+        # serializer =
