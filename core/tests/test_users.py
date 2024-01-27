@@ -179,12 +179,3 @@ class TestGoogleLoginView:
         response = make_api_request(self.endpoint, {})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_google_returns_access_token(self, make_api_request):
-        data = {
-                    "code": code,
-                    "client_id": os.environ.get("GOOGLE_OAUTH2_CLIENT_ID"),
-                    "client_secret": os.environ.get("GOOGLE_OAUTH2_CLIENT_SECRET"),
-                    "redirect_uri": os.environ.get("redirect_uri"),
-                    "grant_type": 'authorization_code'
-                }
