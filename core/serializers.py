@@ -1,12 +1,18 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, generate_sys_username
 
 
 class UserSerializer(serializers.ModelSerializer):
+    system_gen_username = generate_sys_username()
+    username = serializers.CharField(default=system_gen_username)
+
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'username', 'password', 'is_active']
+        fields = ['first_name', 'last_name', 'email', 'password', 'username', 'is_active']
         read_only = ['is_active']
+        extra_kwargs = {
+            'password': {'write_only': True},
+        }
 
 
 class ActivateUserSerializer(serializers.Serializer):
@@ -25,3 +31,11 @@ class UsernameAvailabilitySerializer(serializers.Serializer):
 class LoginUserSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    code = serializers.CharField()
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()

@@ -38,6 +38,7 @@ python-dotenv = "~=1.0.0"
 django-cors-headers = "*"
 gunicorn = "*"
 django-ses = "*"
+django-rest-auth = "*"
 
 [dev-packages]
 pytest = "*"

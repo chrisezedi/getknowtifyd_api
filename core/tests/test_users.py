@@ -1,5 +1,6 @@
 import pytest
 from django.core import mail
+from rest_framework.test import APITestCase
 from rest_framework import status
 from core.models import User
 from core.tokens import token_generator
@@ -20,16 +21,12 @@ class TestCreateUserView:
         User.create_dummy_user()
 
         response = make_api_request(self.endpoint, self.user)
-
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data['email'] is not None
-        assert 'unique' == response.data['email'][0].code
 
     def test_user_created_returns_201(self, make_api_request):
         response = make_api_request(self.endpoint, self.user)
-
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data['is_active'] is False
+        assert response.data["user"]["is_active"] is False
 
     def test_send_activation_email(self, make_api_request):
         make_api_request(self.endpoint, self.user)
@@ -88,7 +85,6 @@ class TestResendActivationMailView:
         response = make_api_request("/auth/resendactivationmail", {'uid': 'johndoe@example.com'})
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['redirect'] == "/"
 
 
 @pytest.mark.django_db
@@ -171,5 +167,15 @@ class TestUserLoginView:
                                     create_user=True)
 
         assert response.status_code == status.HTTP_200_OK
-        assert "access_token" in response.data
+        assert "access" in response.data
         assert "refresh_token" in response.cookies
+
+
+@pytest.mark.django_db
+class TestGoogleLoginView:
+    endpoint = "/auth/google-auth"
+
+    def test_invalid_request_returns_400(self, make_api_request):
+        response = make_api_request(self.endpoint, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

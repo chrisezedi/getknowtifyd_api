@@ -13,6 +13,6 @@
 `python manage.py makemigrations && python manage.py migrate` 
 
 ###  How to Run Test
-`pytest --watch`  
+`pytest`  
 
 [![GNTF Tests](https://github.com/chrisezedi/getknowtifyd_api/actions/workflows/aws.yml/badge.svg)](https://github.com/chrisezedi/getknowtifyd_api/actions/workflows/aws.yml)
